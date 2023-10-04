@@ -3,6 +3,7 @@ import "./App.css";
 import mammoth from "mammoth";
 
 function App() {
+  const [fileName, setFileName] = useState();
   const [crossWord, setCrossWord] = useState("NA");
   const [fieldWord, setFieldWord] = useState("NA");
   const [backgroundWord, setBackgroundWord] = useState("NA");
@@ -12,6 +13,7 @@ function App() {
   const [claimedWord, setClaimedWord] = useState("NA");
   const [abstractWord, setAbstractWord] = useState("NA");
   const [fileContent, setFileContent] = useState("");
+  const [sections, setSections] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [showFileContent, setShowFileContent] = useState(false);
   const [modifiedTitle, setModifiedTitle] = useState("");
@@ -28,30 +30,35 @@ function App() {
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
+    setFileName(e.target.files[0].name);
+
     if (!file) {
       setErrorMessage("Please select a file.");
       return;
     }
 
     const reader = new FileReader();
+
     reader.onload = async (e) => {
       const content = e.target.result;
       try {
         const result = await mammoth.extractRawText({ arrayBuffer: content });
         const text = result.value;
-
         const titleRegx =
-          /([\s\S]*?)(cross-reference to related application|CROSS REFERENCE TO RELATED APPLICATIONS|What is claimed is|Claims|CLAIMS|WHAT IS CLAIMED IS|abstract|ABSTRACT|Cross-reference to related application|CROSS-REFERENCE TO RELATED APPLICATION|field|background|summary|description of the drawing|$)/i;
+          /([\s\S]*?)(cross-reference to related application|CROSS|Cross|CROSS REFERENCE TO RELATED APPLICATIONS|What is claimed is|Claims|CLAIMS|WHAT IS CLAIMED IS|abstract|ABSTRACT|Cross-reference to related application|CROSS-REFERENCE TO RELATED APPLICATION|field|background|summary|description of the drawing|$)/i;
         const titlesec = titleRegx.exec(text);
         if (titlesec) {
-          debugger;
-          const titlename = titlesec[1];
+          const titlenames = titlesec[1];
+          const titlename = titlenames.replace(/\[\d+\]/g, "");
+
           const wordss = titlename.split(/\s+/).filter(Boolean);
           setWordCount(wordss.length);
           setModifiedTitle(titlename);
         }
+
         const crossregex =
-          /cross-reference to related application([\s\S]*?)(?:field|background|summary|description of the drawings|detailed description|what is claimed is|abstract|$)/i;
+          /(?:CROSS-REFERENCE TO RELATED APPLICATION|CROSS REFERENCE TO RELATED APPLICATION|Cross-reference to related application|Cross-Reference To Related Application|Related Applications)([\s\S]*?)(?:TECHNICAL FIELD|FIELD|Field|Background|BACKGROUND|Summary|SUMMARY|DESCRIPTION OF (?: THE) DRAWING|Description Of(?: The)? Drawing|DETAILED DESCRIPTION|WHAT IS CLAIMED IS|ABSTRACT|$)/;
+
         const crosssec = crossregex.exec(text);
         if (crosssec) {
           const crosssection = crosssec[1];
@@ -66,10 +73,9 @@ function App() {
           setCrossWord(crosswordCount);
           console.log("aea", crosswordCount);
         }
-
         const fieldregex =
-          /field([\s\S]*?)(?:background|summary|description of the drawings|detailed description|what is claimed is|abstract|cross-reference to related application|$)/i;
-
+          /(?:FIELD|TECHNICAL FIELD|FIELD OF THE INVENTION|Field|Technical Field)([\s\S]*?)(?:BACKGROUND|Background|BRIEF DESCRIPTION OF THE INVENTION|Summary|SUMMARY|DESCRIPTION OF (?: THE) DRAWING|Description of (?: the) Drawing|DETAILED DESCRIPTION|detailed description|What is claimed is|CLAIMS|Abstract|ABSTRACT|CROSS-REFERENCE TO RELATED APPLICATION|$)/;
+        debugger;
         const fieldsec = fieldregex.exec(text);
         if (fieldsec) {
           const fieldsection = fieldsec[1];
@@ -86,7 +92,7 @@ function App() {
         }
 
         const backgrdregex =
-          /background([\s\S]*?)(?:summary|description of the drawings|detailed description|what is claimed is|abstract|cross-reference to related application|field|$)/i;
+          /(?:background|background of the invention)([\s\S]*?)(?:summary|brief description of the invention|description of (?: the) drawings|detailed description|what is claimed is|abstract|cross-reference to related application|field|$)/i;
         const backgrdsec = backgrdregex.exec(text);
         if (backgrdsec) {
           const backgrdsection = backgrdsec[1];
@@ -103,7 +109,8 @@ function App() {
         }
 
         const summregex =
-          /summary([\s\S]*?)(?:description of the drawing|detailed description|what is claimed is|abstract|cross-reference to related application|field|background|$)/i;
+          /(?:SUMMARY|BRIEF DESCRIPTION OF THE INVENTION|BRIEF SUMMARY)([\s\S]*?)(?:DESCRIPTION OF (?: THE)? DRAWINGS|BRIEF DESCRIPTION OF DRAWINGS|detailed description|what is claimed is|claims|abstract|cross-reference to related application|field|background|$)/i;
+        debugger;
         const summsec = summregex.exec(text);
         if (summsec) {
           const summsection = summsec[1];
@@ -120,7 +127,7 @@ function App() {
         }
 
         const dodregex =
-          /description of(?: the)? drawing([\s\S]*?)(?:detailed description|what is claimed is|abstract|cross-reference to related application|field|background|summary|$)/i;
+          /(?:Description of(?: the)? Drawings|DESCRIPTION OF(?: THE)? DRAWINGS)([\s\S]*?)(?:DETAILED DESCRIPTION|\nDetailed Description|DESCRIPTION OF EMBODIMENTS|DETAILED DESCRIPTION OF SPECIFIC EMBODIMENTS|What is claimed is|CLAIMS|ABSTRACT|CROSS-REFERENCE TO RELATED APPLICATION|FIELD|BACKGROUND|SUMMARY|BRIEF DESCRIPTION THE INVENTION|$)/;
         const dodsec = dodregex.exec(text);
         if (dodsec) {
           const dodsection = dodsec[1];
@@ -137,7 +144,8 @@ function App() {
         }
 
         const detDesregex =
-          /(?:DETAILED DESCRIPTION|Detailed description)([\s\S]*?)(?:What is claimed is|Claims|WHAT IS CLAIMED IS|CLAIMS|abstract|ABSTRACT|Cross-reference to related application|CROSS-REFERENCE TO RELATED APPLICATION|field|background|summary|description of the drawing|$)/;
+          /(?:\nDetailed Description|DETAILED DESCRIPTION|DESCRIPTION OF EMBODIMENTS|DETAILED DESCRIPTION OF SPECIFIC EMBODIMENTS)([\s\S]*?)(?:What is claimed is|Claims|WHAT IS CLAIMED IS|CLAIMS|abstract|ABSTRACT|Cross-reference to related application|CROSS-REFERENCE TO RELATED APPLICATION|FIELD|BACKGROUND|SUMMARY|$)/;
+
         const detDessec = detDesregex.exec(text);
         if (detDessec) {
           const detDessection = detDessec[1];
@@ -154,17 +162,23 @@ function App() {
         }
 
         const claimregex =
-          /(?:What is claimed is|Claims|CLAIMS|WHAT IS CLAIMED IS)([\s\S]*?)(?:abstract|ABSTRACT|Cross-reference to related application|CROSS-REFERENCE TO RELATED APPLICATION|field|background|summary|description of the drawing|$)/;
+          /(?:What is claimed is|Claims|CLAIMS|WHAT IS CLAIMED IS)([\s\S]*?)(?:abstract|ABSTRACT|Related Applications|Cross-reference to related application|CROSS-REFERENCE TO RELATED APPLICATION|FIELD|Field|BACKGROUND|SUMMARY|$)/;
 
         const claimsec = claimregex.exec(text);
+
         if (claimsec) {
           const claimsection = claimsec[1];
           const linesa = claimsection
             .split(/(?<=\.)\s+/)
             .filter((line) => line.includes("."));
           const filteredLines = linesa.filter(
-            (line) => !/^\s*[\d\n\t\s]+\.?$|:\s*\n\n1\./.test(line)
+            (line) =>
+              line.trim().length >= 40 &&
+              !/^\s*[\d\n\t\s]+\.?$|^:\s*\n{1,10}CLAIMS\s*\n{1,10}1\./.test(
+                line
+              )
           );
+
           let independentClaimCount = 0;
           let dependentClaimCount = 0;
           const independentClaims = [];
@@ -182,7 +196,6 @@ function App() {
               independentClaimCount++;
             }
           }
-
           setTotal(filteredLines.length);
           setIndependent(independentClaimCount);
           setdependent(dependentClaimCount);
@@ -202,8 +215,7 @@ function App() {
         }
 
         const abstractregex =
-          /(?: Abstract|ABSTRACT)([\s\S]*?)(?:cross-reference to related application|field|background|summary|description of the drawing|What is claimed is|Claims|CLAIMS|$)/;
-
+          /(?: Abstract|ABSTRACT)([\s\S]*?)(?:What is claimed is|Claims|CLAIMS|CROSS-REFERENCE |cross-reference to related application|field|background|summary|description of the drawing|$)/;
         const abssec = abstractregex.exec(text);
         if (abssec) {
           const abssection = abssec[1];
@@ -221,30 +233,38 @@ function App() {
         }
 
         const figRegex =
-          /description of(?: the)? drawing([\s\S]*?)(?:detailed description|what is claimed is|abstract|cross-reference to related application|field|background|summary|$)/i;
-
+          /(?:Description of(?: the)? Drawings|DESCRIPTION OF(?: THE)? DRAWINGS)([\s\S]*?)(?:DETAILED DESCRIPTION|\nDetailed Description|DESCRIPTION OF EMBODIMENTS|DETAILED DESCRIPTION OF SPECIFIC EMBODIMENTS|What is claimed is|CLAIMS|ABSTRACT|CROSS-REFERENCE TO RELATED APPLICATION|FIELD|BACKGROUND|SUMMARY|BRIEF DESCRIPTION THE INVENTION|$)/;
+        debugger;
         const descriptionMatches = figRegex.exec(text);
+
         if (descriptionMatches) {
+          debugger;
           const descriptionText = descriptionMatches[1];
           const imageRegex1 =
-            /(?:FIG(?:URE)?)\.?[-\s]?\d+[A-Z]?(?:\([\w\s]+\))?\b/gi;
-
+            /(?:FIG(?:URE)?)\.?[-\s]?(?:\d+|[IVXLCDM]+)[A-Z]?(?:\([\w\s]+\))?\b/gi;
           const matches = descriptionText.match(imageRegex1);
           const uniqueMatches = [...new Set(matches)];
           console.log("aa", uniqueMatches);
           const Rx1 = uniqueMatches.length;
-          setImgCount(Rx1);
+          const figsRomanRegex =
+            /FIGS(?:URES?)?\.\s(?:\d+|[IVXLCDM]+)[A-Z](?:\sAND\s(?:\d+|[IVXLCDM]+)[A-Z])+/gi;
+          const matches2 = descriptionText.match(figsRomanRegex);
+          const unique = [...new Set(matches2)];
+          const Rx2 = unique.length * 2;
+          const totalFigs = Rx1 + Rx2;
+          setImgCount(totalFigs);
 
           const imageRegex =
-            /FIGS\.\s?\d+([A-Za-z\(\)]+)?\s?(?:to(?!.*and)|-(?!.*and))\s?\d+([A-Za-z\(\)]+)?/gi;
+            /FIGS\.\s?\d+([A-Za-z\(\)]+)?\s?(?:to(?!.*and)|-(?!.*and))\s?\d+([A-Za-z\(\)]+)?/gi; //without and
+
           const matches1 = descriptionText.match(imageRegex);
           const uniqueMatches1 = [...new Set(matches1)];
           console.log("jii", uniqueMatches1);
         }
         setFileContent(text);
+
         setSentenceCount(text.split(/[.]+/).length);
         setLineCount(text.split("\n").length);
-
         setErrorMessage("");
       } catch (error) {
         setErrorMessage("Error reading the .docx file.");
@@ -260,7 +280,19 @@ function App() {
 
   return (
     <div className="App">
-      <h1>File Data Calculation</h1>
+      <div
+        style={{
+          letterSpacing: 0,
+          top: 0,
+          width: "100%",
+          backgroundColor: "",
+          color: "white",
+          padding: "20px",
+          textAlign: "center",
+        }}
+      >
+        <h1>Patent Reader</h1>
+      </div>
       <input type="file" onChange={handleFileChange} />
       {errorMessage && <p className="error">{errorMessage}</p>}
       <div className="result">
@@ -294,24 +326,42 @@ function App() {
       >
         <div>
           <button onClick={() => setShowFileContent(!showFileContent)}>
-            {showFileContent ? "hide" : "view"} the content
+            {showFileContent ? "hide" : "view"} content
           </button>
         </div>
         <div>
           <button onClick={() => setShowClaimContent(!showClaimContent)}>
-            {showClaimContent ? "hide" : "view"} Claims Details
+            {showClaimContent ? "hide" : "view"} Claims
           </button>
         </div>
       </div>
 
       {showFileContent && (
-        <div className="file-content">
-          <h2>File Content:</h2>
-          <pre>
-            <p>{fileContent}</p>
-          </pre>
-        </div>
-      )}
+  <div className="file-content" style={{ textAlign: 'center' }}>
+    <h2 style={{color:"white"}}>File Content:{"  "+fileName}</h2>
+    <p style={{ whiteSpace: 'pre-wrap', textAlign: 'left', backgroundColor: 'white', margin: '0' }}>
+      {fileContent
+        .split('\n')
+        .reduce((acc, line) => {
+          const trimmedLine = line.trim();
+          const modifiedLine = trimmedLine.replace(
+            /\[\d+\]|\b(?:[1-4]|[6-9])?\d{1,}(?:(?<!\[\d+)\b5\b)?\b/g,
+            ""
+          );
+          if (modifiedLine) {
+            acc.push(modifiedLine);
+          } else if (!acc[acc.length - 1]) {
+            return acc;
+          } else {
+            acc.push('');
+          }
+          return acc;
+        }, [])
+        .join('\n')}
+    </p>
+  </div>
+)}
+
 
       {showClaimContent && (
         <div className="claim-content">
